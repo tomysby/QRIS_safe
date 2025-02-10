@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() => runApp(const MyApp());
 
@@ -93,7 +94,8 @@ class _QRViewExampleState extends State<QRViewExample> {
   }
 
   Future<void> _checkWithVirusTotal(String url) async {
-    const apiKey = '6e56d6bf9a15fd3e395bd3de5e33a4a87d682eb943d560ddfb41a8626c702898';
+    const apiKey =
+        '6e56d6bf9a15fd3e395bd3de5e33a4a87d682eb943d560ddfb41a8626c702898';
     final encodedUrl = base64Url.encode(utf8.encode(url)).replaceAll('=', '');
     final apiUrl = 'https://www.virustotal.com/api/v3/urls/$encodedUrl';
 
@@ -108,22 +110,32 @@ class _QRViewExampleState extends State<QRViewExample> {
 
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
-        final scanResult = jsonResponse['data']['attributes']['last_analysis_stats'];
+        final scanResult =
+            jsonResponse['data']['attributes']['last_analysis_stats'];
 
         // Periksa apakah malicious atau suspicious lebih dari 0
         if (scanResult['malicious'] > 0 || scanResult['suspicious'] > 0) {
           _showWarningDialog('Link/URL Website Berbahaya');
         } else {
+          // Tampilkan popup untuk membuka URL di browser
           showDialog(
             context: context,
             builder: (_) => AlertDialog(
               title: const Text('VirusTotal Result'),
-              content: Text('Scan Result: ${scanResult.toString()}'),
+              content:
+                  Text('URL aman. Apakah Anda ingin membuka URL ini?\n\n$url'),
               actions: <Widget>[
                 TextButton(
-                  child: const Text('OK'),
+                  child: const Text('Batal'),
                   onPressed: () {
                     Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: const Text('Buka'),
+                  onPressed: () async {
+                    Navigator.of(context).pop(); // Tutup popup
+                    await _launchURL(url); // Buka URL di browser
                   },
                 ),
               ],
@@ -135,6 +147,16 @@ class _QRViewExampleState extends State<QRViewExample> {
       }
     } catch (e) {
       _showErrorDialog('Error: $e');
+    }
+  }
+
+// Fungsi untuk membuka URL di browser
+  Future<void> _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      _showErrorDialog('Tidak dapat membuka URL: $url');
     }
   }
 

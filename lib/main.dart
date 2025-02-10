@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
 void main() => runApp(const MyApp());
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -14,23 +17,26 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 class QRViewExample extends StatefulWidget {
   const QRViewExample({Key? key}) : super(key: key);
+
   @override
   State<StatefulWidget> createState() => _QRViewExampleState();
 }
-class _QRViewExampleState extends
-State<QRViewExample> {
-  final GlobalKey qrKey =
-GlobalKey(debugLabel: 'QR');
+
+class _QRViewExampleState extends State<QRViewExample> {
+  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   Barcode? result;
   QRViewController? controller;
+
   @override
   void reassemble() {
     super.reassemble();
     controller!.pauseCamera();
     controller!.resumeCamera();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,8 +66,8 @@ GlobalKey(debugLabel: 'QR');
       ),
     );
   }
-    Widget _buildQrView(BuildContext
-context) {
+
+  Widget _buildQrView(BuildContext context) {
     return QRView(
       key: qrKey,
       onQRViewCreated: _onQRViewCreated,
@@ -70,12 +76,12 @@ context) {
         borderRadius: 10,
         borderLength: 30,
         borderWidth: 10,
-        cutOutSize: 300,//MediaQuery.of(context).size.width * 0.8,
+        cutOutSize: 300, // MediaQuery.of(context).size.width * 0.8,
       ),
     );
   }
-  void _onQRViewCreated(QRViewController
-controller) {
+
+  void _onQRViewCreated(QRViewController controller) {
     setState(() {
       this.controller = controller;
     });
@@ -85,45 +91,71 @@ controller) {
       });
     });
   }
-    Future<void> _checkWithVirusTotal(String url)
-async {
-  const apiKey = '6e56d6bf9a15fd3e395bd3de5e33a4a87d682eb943d560ddfb41a8626c702898';//'1940a218ac7fe12e4503aef34a8d99c4dfa70b17fa85601a31ed46dfc08b3543';
-  final encodedUrl = base64Url.encode(utf8.encode(url)).replaceAll('=', '');  // Encode and remove padding
-  final apiUrl = 'https://www.virustotal.com/api/v3/urls/$encodedUrl';
-  try {
-    final response = await http.get(
-      Uri.parse(apiUrl),
-      headers: {
-        'x-apikey': apiKey,
-        'Content-Type': 'application/json',
-      },
-    );
-        if (response.statusCode == 200) {
-      final jsonResponse = json.decode(response.body);
-      // Tampilkan hasil dari VirusTotal (misalnya dideteksi atau aman)
-      final scanResult = jsonResponse['data']['attributes']['last_analysis_stats'];
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('VirusTotal Result'),
-          content: Text('Scan Result: ${scanResult.toString()}'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        ),
+
+  Future<void> _checkWithVirusTotal(String url) async {
+    const apiKey = '6e56d6bf9a15fd3e395bd3de5e33a4a87d682eb943d560ddfb41a8626c702898';
+    final encodedUrl = base64Url.encode(utf8.encode(url)).replaceAll('=', '');
+    final apiUrl = 'https://www.virustotal.com/api/v3/urls/$encodedUrl';
+
+    try {
+      final response = await http.get(
+        Uri.parse(apiUrl),
+        headers: {
+          'x-apikey': apiKey,
+          'Content-Type': 'application/json',
+        },
       );
-    } else {
-      _showErrorDialog('Error: Unable to scan the URL with VirusTotal.');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        final scanResult = jsonResponse['data']['attributes']['last_analysis_stats'];
+
+        // Periksa apakah malicious atau suspicious lebih dari 0
+        if (scanResult['malicious'] > 0 || scanResult['suspicious'] > 0) {
+          _showWarningDialog('Link/URL Website Berbahaya');
+        } else {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('VirusTotal Result'),
+              content: Text('Scan Result: ${scanResult.toString()}'),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        _showErrorDialog('Error: Unable to scan the URL with VirusTotal.');
+      }
+    } catch (e) {
+      _showErrorDialog('Error: $e');
     }
-  } catch (e) {
-    _showErrorDialog('Error: $e');
   }
-}
+
+  void _showWarningDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Warning'),
+        content: Text(message),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -141,6 +173,7 @@ async {
       ),
     );
   }
+
   @override
   void dispose() {
     controller?.dispose();
